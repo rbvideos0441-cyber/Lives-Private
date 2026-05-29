@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "LiveStream": {
+      "title": "LiveStream",
+      "description": "Active in-progress live stream",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hostId": { "type": "string" },
+        "hostName": { "type": "string" },
+        "hostAvatar": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "entryPrice": { "type": "number" },
+        "viewersCount": { "type": "number" },
+        "likesCount": { "type": "number" },
+        "isLive": { "type": "boolean" },
+        "streamStartedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "hostId", "hostName", "isLive"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A live chat message sent during a stream",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "liveId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "liveId", "userId", "userName", "text", "timestamp"]
+    },
+    "WebRTCViewerSignaling": {
+      "title": "WebRTCViewerSignaling",
+      "description": "Signaling document for established real-time WebRTC connections",
+      "type": "object",
+      "properties": {
+        "viewerId": { "type": "string" },
+        "viewerUsername": { "type": "string" },
+        "offer": { "type": "object" },
+        "answer": { "type": "object" },
+        "hostCandidates": { "type": "array" },
+        "viewerCandidates": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["viewerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "lives": {
+      "schema": "LiveStream",
+      "description": "All currently registered active or ended live streams"
+    },
+    "lives/{liveId}/chats": {
+      "schema": "ChatMessage",
+      "description": "Real-time chat messages within a specific live stream"
+    },
+    "lives/{liveId}/viewers": {
+      "schema": "WebRTCViewerSignaling",
+      "description": "WebRTC ICE peer signaling for viewer-to-host direct streaming"
+    }
+  }
+}

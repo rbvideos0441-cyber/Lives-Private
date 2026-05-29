@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>LiveX - Transmissões ao Vivo Interativas</title>
+    
+    <!-- PWA Primary Configs -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#09090b" />
+    
+    <!-- iOS / Safary WebApp Standalone Compatibility -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LiveX" />
+    <link rel="apple-touch-icon" href="/icon-any.svg" />
+    
+    <!-- Windows Launcher tiles -->
+    <meta name="msapplication-TileColor" content="#09090b" />
+    <meta name="msapplication-TileImage" content="/icon-any.svg" />
+    
+    <style>
+      /* Smooth touch scrolling and overflow limits to feel native on devices */
+      html, body {
+        background-color: #09090b;
+        color: #f4f4f5;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* Connection Offline Indicator Widget styling */
+      #pwa-network-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: #ef4444;
+        color: white;
+        text-align: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
+        overflow: hidden;
+        pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      #pwa-network-bar.offline {
+        height: 52px;
+        padding-top: 12px; /* view-fit safe clearance */
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-950 text-zinc-100">
+    <!-- Real-time network health warning alert -->
+    <div id="pwa-network-bar">
+      <span>⚠️ Sem Conexão • Tentando reconectar automaticamente...</span>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Programmatic SVG to Legacy PNG generator & Service Worker Registrar -->
+    <script>
+      // 1. Dynamic compiler to cache /icon-192.png and /icon-512.png automatically if missed
+      async function preRenderPWAIconsInCache() {
+        try {
+          const cache = await caches.open('livex-static-v2');
+          const has192 = await cache.match('/icon-192.png');
+          const has512 = await cache.match('/icon-512.png');
+          
+          if (has192 && has512) {
+            console.log('[PWA] Legacy PNG icons already compiled and active.');
+            return;
+          }
+
+          const response = await fetch('/icon-any.svg');
+          const svgContent = await response.text();
+          const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+          const objectURL = URL.createObjectURL(svgBlob);
+
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = objectURL;
+          
+          img.onload = async () => {
+            const compilePNG = (size) => {
+              return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  // Fill background
+                  ctx.fillStyle = '#09090b';
+                  ctx.fillRect(0, 0, size, size);
+                  // Render vector
+                  ctx.drawImage(img, 0, 0, size, size);
+                  canvas.toBlob((blob) => {
+                    if (blob) {
+                      resolve(new Response(blob, {
+                        status: 200,
+                        headers: { 'Content-Type': 'image/png' }
+                      }));
+                    } else resolve(null);
+                  }, 'image/png');
+                } else resolve(null);
+              });
+            };
+
+            const response192 = await compilePNG(192);
+            if (response192) {
+              await cache.put('/icon-192.png', response192);
+            }
+
+            const response512 = await compilePNG(512);
+            if (response512) {
+              await cache.put('/icon-512.png', response512);
+            }
+
+            URL.revokeObjectURL(objectURL);
+            console.log('[PWA] Dynamic base-level PNG icons compiled from SVG and seeded successfully in cache storage!');
+          };
+        } catch (error) {
+          console.warn('[PWA] Automatic PNG builder pipeline skipped:', error);
+        }
+      }
+
+      // 2. Service Worker registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+          try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('[PWA] Service Worker registered correctly on scope:', registration.scope);
+            
+            // Seed the PNG icons once register concludes
+            await preRenderPWAIconsInCache();
+          } catch (err) {
+            console.error('[PWA] Service Worker registration failed:', err);
+          }
+        });
+      }
+
+      // 3. System Connection status change indicators
+      const statusWidget = document.getElementById('pwa-network-bar');
+      
+      function checkConnectionStatus() {
+        if (navigator.onLine) {
+          statusWidget.classList.remove('offline');
+        } else {
+          statusWidget.classList.add('offline');
+        }
+      }
+
+      window.addEventListener('online', checkConnectionStatus);
+      window.addEventListener('offline', checkConnectionStatus);
+      checkConnectionStatus();
+    </script>
+  </body>
+</html>
+

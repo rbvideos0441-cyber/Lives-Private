@@ -1,0 +1,6 @@
+{
+  "name": "Plataforma de Transmissão ao Vivo",
+  "description": "Plataforma profissional de transmissão ao vivo com moedas, fotos privadas, divisão de receita e painel administrativo.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

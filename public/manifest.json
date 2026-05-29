@@ -1,0 +1,51 @@
+{
+  "name": "LiveX - Plataforma de Transmissão ao Vivo",
+  "short_name": "LiveX",
+  "description": "Plataforma profissional de transmissão ao vivo com bate-papo em tempo real com tecnologia WebRTC e Firestore.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#ec4899",
+  "orientation": "portrait-primary",
+  "categories": ["social", "entertainment"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-any.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explorar Lives",
+      "short_name": "Explorar",
+      "description": "Veja transmissões interativas ativas",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

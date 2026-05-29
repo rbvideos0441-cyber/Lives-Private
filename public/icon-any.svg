@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="pinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#db2777" />
+      <stop offset="50%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="15" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Main background rounded square -->
+  <rect width="512" height="512" rx="128" fill="#09090b"/>
+  <!-- Glowing neon decorative ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#pinkGrad)" stroke-width="12" filter="url(#glow)" opacity="0.8"/>
+  <!-- Outer metallic ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#pinkGrad)" stroke-width="8" opacity="0.9"/>
+  <!-- Central camera logo with a live pulsing dot -->
+  <g transform="translate(141, 141)" fill="none" stroke="url(#pinkGrad)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Camera Body -->
+    <path d="M46.7 53.3h22.2l12.4-20h67l12.4 20h22.2A46.7 46.7 0 0 1 230 100v80A46.7 46.7 0 0 1 183.3 226.7H46.7A46.7 46.7 0 0 1 0 180v-80A46.7 46.7 0 0 1 46.7 53.3z" stroke-width="14" fill="#000000" fill-opacity="0.2"/>
+    <!-- Outer Lens Ring -->
+    <circle cx="115" cy="140" r="45" stroke-width="14"/>
+    <!-- Interior lens reflection -->
+    <circle cx="125" cy="130" r="15" fill="url(#pinkGrad)" stroke="none"/>
+    <!-- Flash dot / Pulsing live state -->
+    <circle cx="180" cy="90" r="10" fill="#ef4444" stroke="none" />
+  </g>
+</svg>

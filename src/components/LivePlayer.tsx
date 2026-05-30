@@ -44,18 +44,27 @@ import {
 } from 'lucide-react';
 
 const getSimulationVideoUrl = (hostName: string | undefined): string => {
-  if (!hostName) return 'https://assets.mixkit.co/videos/preview/mixkit-woman-chatting-on-video-call-using-her-tablet-41860-large.mp4';
+  // Ultra-compatible public CDN URLs that bypass any hotlink protections
+  const loops = [
+    'https://vjs.zencdn.net/v/oceans.mp4', // Oceans
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4', // Human live-action sci-fi talk
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', // Escape clip
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' // Joyrides clip
+  ];
+  
+  if (!hostName) return loops[0];
   const normalized = hostName.toLowerCase();
+  
   if (normalized.includes('juliana') || normalized.includes('bella')) {
-    // Beautiful chatting influencer/girl loop
-    return 'https://assets.mixkit.co/videos/preview/mixkit-woman-chatting-on-video-call-using-her-tablet-41860-large.mp4';
+    // Elegant oceans loop
+    return loops[0];
   }
-  if (normalized.includes('robson') || normalized.includes('admin')) {
-    // Cyberpunk/neon styled stream loop falling back seamlessly
-    return 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-retro-style-40187-large.mp4';
+  if (normalized.includes('robson') || normalized.includes('admin') || normalized.includes('videos')) {
+    // tears of steel
+    return loops[1];
   }
-  // Alternate kitchen/cook live vlog stream loop
-  return 'https://assets.mixkit.co/videos/preview/mixkit-young-woman-streaming-live-from-her-kitchen-41865-large.mp4';
+  // Alternate clips
+  return loops[2];
 };
 
 interface LivePlayerProps {
@@ -92,6 +101,10 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
 
   // Alias activeLive as live so all sub-components and logic continue to function flawlessly
   const live = activeLive;
+
+  const currentLiveId = live.id;
+  const isHostCurrentUser = live.hostId === currentUser.id;
+  const isAdminOrSuper = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
 
   // TikTok-Style Swipe Up/Down and Keyboard Arrow Navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -181,7 +194,8 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   const [hasPaid, setHasPaid] = useState(false);
   const [inputText, setInputText] = useState('');
   const [likesFloating, setLikesFloating] = useState<{ id: number; emoji: string; x: number; y: number; size: number }[]>([]);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Default to true to allow immediate, silent browser autoplay to pass Chrome/Safari protections
+  const [hasVideoError, setHasVideoError] = useState(false);
   const [isGiftMenuOpen, setIsGiftMenuOpen] = useState(false);
   const [activeGiftBanner, setActiveGiftBanner] = useState<{ sender: string; name: string; emoji: string } | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -192,6 +206,79 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   const [simBitrate, setSimBitrate] = useState(3840);
   const [micLevel, setMicLevel] = useState<number>(0);
   const [showBroadcasterTip, setShowBroadcasterTip] = useState(true);
+
+  // Web Audio Ambient Synthesizer Loop (plays soft, relaxing chords when they click "Unmute" inside simulation)
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const synthIntervalRef = useRef<any>(null);
+
+  const startSimulatedSynth = () => {
+    try {
+      if (audioContextRef.current) return;
+      
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      audioContextRef.current = ctx;
+
+      let step = 0;
+      // Soft, warm lo-fi melodic chord progression
+      const progression = [
+        [196.00, 246.94, 293.66, 392.00], // Gmaj7
+        [164.81, 246.94, 329.63, 392.00], // Em7
+        [130.81, 261.63, 329.63, 392.00], // Cmaj7
+        [146.83, 293.66, 349.23, 440.00]  // D7
+      ];
+
+      synthIntervalRef.current = setInterval(() => {
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        
+        const chords = progression[step % progression.length];
+        step++;
+
+        chords.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          
+          osc.type = 'triangle'; // Warm, soft tone
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+          
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.03 - idx * 0.004, ctx.currentTime + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 3.8);
+          
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.start();
+          osc.stop(ctx.currentTime + 4.0);
+        });
+      }, 4000);
+    } catch (e) {
+      console.warn('Web Audio Simulation failed:', e);
+    }
+  };
+
+  const stopSimulatedSynth = () => {
+    if (synthIntervalRef.current) {
+      clearInterval(synthIntervalRef.current);
+      synthIntervalRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    // If not muted and viewing a simulated stream, play warm synth pads
+    if (!isMuted && !isHostCurrentUser && live.streamSource !== 'WEBCAM') {
+      startSimulatedSynth();
+    } else {
+      stopSimulatedSynth();
+    }
+    return () => stopSimulatedSynth();
+  }, [isMuted, live.streamSource, isHostCurrentUser]);
 
   // Bitrate fluctuation simulator
   useEffect(() => {
@@ -243,10 +330,6 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   // Viewer WebRTC connection references
   const viewerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const admittedHostCandidatesRef = useRef<Set<string>>(new Set());
-
-  const currentLiveId = live.id;
-  const isHostCurrentUser = live.hostId === currentUser.id;
-  const isAdminOrSuper = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
 
   // Find host follow state
   const targetHost = users.find(u => u.id === live.hostId);
@@ -906,16 +989,42 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
               ) : (
                 /* Simulated immersive background loops */
                 <div className="absolute inset-0 flex flex-col justify-between bg-cover bg-center" style={{ backgroundImage: `url(${live.hostAvatar})` }}>
-                  {/* Real-time high-fidelity streaming video loop simulation instead of black screen */}
-                  <video
-                    src={getSimulationVideoUrl(live.hostName)}
-                    autoPlay
-                    loop
-                    playsInline
-                    muted={isMuted}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
-                    style={{ filter: getFilterCSS(live.activeFilter || 'beauty') }}
-                  />
+                  {/* Swirling active neon aura loop fallback if video gets blocked or has CORS issues */}
+                  {hasVideoError ? (
+                    <div className="absolute inset-0 bg-gradient-to-tr from-pink-950/80 via-slate-900/90 to-indigo-950/85 flex items-center justify-center overflow-hidden">
+                      <div className="absolute w-[300px] h-[300px] bg-pink-500/10 rounded-full blur-[90px] animate-pulse duration-[3000ms]" />
+                      <div className="absolute w-[250px] h-[250px] bg-indigo-500/10 rounded-full blur-[110px] animate-ping duration-[6000ms]" />
+                      
+                      {/* Active equalizer bars in simulation */}
+                      <div className="flex items-center gap-1.5 opacity-40">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <div
+                            key={i}
+                            className="w-1.5 bg-gradient-to-t from-pink-500 to-indigo-400 rounded-full animate-bounce"
+                            style={{
+                              height: `${24 + (i * 12) % 32}px`,
+                              animationDuration: `${0.6 + i * 0.12}s`,
+                              animationDelay: `${i * 0.1}s`
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <video
+                      src={getSimulationVideoUrl(live.hostName)}
+                      autoPlay
+                      loop
+                      playsInline
+                      muted={isMuted}
+                      onError={() => {
+                        console.warn('Simulation video loop load failed, falling back to beautiful swirl aura visualizer');
+                        setHasVideoError(true);
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
+                      style={{ filter: getFilterCSS(live.activeFilter || 'beauty') }}
+                    />
+                  )}
 
                   {/* Dark overlay for UI legends reading safety */}
                   <div className="absolute inset-0 bg-black/20 pointer-events-none" />

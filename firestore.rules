@@ -8,10 +8,6 @@ service cloud.firestore {
     }
 
     // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -22,34 +18,27 @@ service cloud.firestore {
 
     // --- Active Live Streams ---
     match /lives/{liveId} {
-      // Anyone can read active or stored live streams
       allow read: if true;
-
-      // Hosts can create/update their own live stream document
-      allow create: if isSignedIn() && 
-        incomingData().hostId == request.auth.uid;
-
-      allow update: if isSignedIn() && (
-        // Host updating their own stream params
-        resource.data.hostId == request.auth.uid ||
-        // Viewers incrementing viewersCount or likesCount safely
-        (incomingData().diff(resource.data).affectedKeys().hasAny(['viewersCount', 'likesCount']))
-      );
-
-      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow create, update: if isValidId(liveId) &&
+        incomingData().id is string &&
+        incomingData().hostId is string &&
+        incomingData().hostName is string;
+      allow delete: if true;
 
       // --- Nested chat messages subcollection ---
       match /chats/{msgId} {
         allow read: if true;
-        allow create: if isSignedIn() && 
-          incomingData().userId == request.auth.uid;
-        // Admins or hosts can delete messages, but nobody should normally edit
-        allow delete: if isSignedIn();
+        allow create, update: if isValidId(msgId) &&
+          incomingData().id is string &&
+          incomingData().liveId is string &&
+          incomingData().userId is string &&
+          incomingData().text is string;
+        allow delete: if true;
       }
 
       // --- WebRTC signaling subcollection for streaming ---
       match /viewers/{viewerId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
     }
   }

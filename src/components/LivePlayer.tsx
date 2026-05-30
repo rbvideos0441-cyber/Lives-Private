@@ -43,6 +43,21 @@ import {
   Check
 } from 'lucide-react';
 
+const getSimulationVideoUrl = (hostName: string | undefined): string => {
+  if (!hostName) return 'https://assets.mixkit.co/videos/preview/mixkit-woman-chatting-on-video-call-using-her-tablet-41860-large.mp4';
+  const normalized = hostName.toLowerCase();
+  if (normalized.includes('juliana') || normalized.includes('bella')) {
+    // Beautiful chatting influencer/girl loop
+    return 'https://assets.mixkit.co/videos/preview/mixkit-woman-chatting-on-video-call-using-her-tablet-41860-large.mp4';
+  }
+  if (normalized.includes('robson') || normalized.includes('admin')) {
+    // Cyberpunk/neon styled stream loop falling back seamlessly
+    return 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-retro-style-40187-large.mp4';
+  }
+  // Alternate kitchen/cook live vlog stream loop
+  return 'https://assets.mixkit.co/videos/preview/mixkit-young-woman-streaming-live-from-her-kitchen-41865-large.mp4';
+};
+
 interface LivePlayerProps {
   live: LiveStream;
   onClose: () => void;
@@ -891,22 +906,31 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
               ) : (
                 /* Simulated immersive background loops */
                 <div className="absolute inset-0 flex flex-col justify-between bg-cover bg-center" style={{ backgroundImage: `url(${live.hostAvatar})` }}>
-                  {/* Colored glass filter */}
-                  <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" />
+                  {/* Real-time high-fidelity streaming video loop simulation instead of black screen */}
+                  <video
+                    src={getSimulationVideoUrl(live.hostName)}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted={isMuted}
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
+                    style={{ filter: getFilterCSS(live.activeFilter || 'beauty') }}
+                  />
+
+                  {/* Dark overlay for UI legends reading safety */}
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
                   
                   {/* Digital HUD guide grids overlay */}
-                  <div className="absolute inset-x-6 top-1/5 bottom-1/5 border border-white/[0.04] rounded-3xl pointer-events-none select-none flex items-center justify-center">
-                    <div className="absolute inset-0 border-t border-dashed border-white/[0.08] top-1/3" />
-                    <div className="absolute inset-0 border-t border-dashed border-white/[0.08] top-2/3" />
-                    <div className="absolute inset-0 border-l border-dashed border-white/[0.08] left-1/3" />
-                    <div className="absolute inset-0 border-l border-dashed border-white/[0.08] left-2/3" />
+                  <div className="absolute inset-x-6 top-1/5 bottom-1/5 border border-white/[0.04] rounded-3xl pointer-events-none select-none flex items-center justify-center z-10">
+                    <div className="absolute inset-x-0 border-t border-dashed border-white/[0.06] top-1/2" />
+                    <div className="absolute inset-y-0 border-l border-dashed border-white/[0.06] left-1/2" />
                   </div>
 
                   {/* Blinking camera recording light overlay */}
                   <div className="absolute top-20 right-4 flex items-center gap-1.5 px-2.5 py-0.5 bg-black/60 rounded-full border border-white/10 pointer-events-none select-none z-10">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                     <span className="w-2 h-2 rounded-full bg-red-500 absolute" />
-                    <span className="text-[8px] text-white font-mono font-bold tracking-widest uppercase">HD REC</span>
+                    <span className="text-[8px] text-white font-mono font-bold tracking-widest uppercase">HD SIMULAÇÃO</span>
                   </div>
 
                   {/* Simulated Signal overlay */}
@@ -929,19 +953,13 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
                     })}
                   </div>
 
-                  {/* Centered Profile Avatar card inside live */}
-                  <div className="relative flex-1 flex flex-col items-center justify-center p-4">
-                    <div className="w-24 h-24 rounded-full border-4 border-pink-500 bg-gray-900 overflow-hidden shadow-2xl relative mb-4 animate-pulse duration-1000">
-                      <img src={live.hostAvatar} alt={live.hostName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <span className="absolute bottom-0 inset-x-0 bg-pink-600 text-white font-mono font-bold text-[7px] py-0.5 uppercase tracking-wide">ONLINE</span>
-                    </div>
-                    
-                    <h3 className="text-xs sm:text-sm font-display font-black text-white flex items-center justify-center gap-1">
-                      @{live.hostName} <Sparkles size={11} className="text-pink-400 fill-pink-500/20" />
-                    </h3>
-                    
-                    <p className="text-[10px] text-gray-300 font-bold bg-pink-900/20 px-4 py-1.5 rounded-full border border-pink-500/30 mt-3 max-w-[280px] text-center shadow-lg shadow-pink-600/10">
-                      "{live.title}"
+                  {/* Subtle translucent streamer badge to designate info details cleanly */}
+                  <div className="absolute top-32 left-4 right-4 bg-black/45 backdrop-blur-md border border-white/10 rounded-xl p-3 z-10 max-w-[220px] pointer-events-none">
+                    <p className="text-[10px] text-rose-400 font-mono font-bold flex items-center gap-1 uppercase tracking-wider">
+                      <Sparkles size={10} className="animate-spin" /> Conectado via Loop
+                    </p>
+                    <p className="text-[9px] text-gray-300 mt-1">
+                      Assista ao feed alternativo de <strong>@{live.hostName}</strong>
                     </p>
                   </div>
                 </div>

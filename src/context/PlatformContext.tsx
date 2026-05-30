@@ -168,7 +168,32 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => loadState<UserProfile | null>('current_user', null)); 
-  const [users, setUsers] = useState<UserProfile[]>(() => loadState('users', INITIAL_USERS));
+  const [users, setUsers] = useState<UserProfile[]>(() => {
+    const loadedUsers = loadState('users', INITIAL_USERS);
+    const robsonEmail = 'robsonbatista3@gmail.com';
+    const hasRobson = loadedUsers.some(u => u.email.toLowerCase() === robsonEmail.toLowerCase());
+    if (!hasRobson) {
+      const robsonTemplate = INITIAL_USERS.find(u => u.email.toLowerCase() === robsonEmail.toLowerCase());
+      if (robsonTemplate) {
+        loadedUsers.unshift(robsonTemplate);
+      }
+    } else {
+      const robsonIdx = loadedUsers.findIndex(u => u.email.toLowerCase() === robsonEmail.toLowerCase());
+      if (robsonIdx !== -1) {
+        loadedUsers[robsonIdx].password = '25041981044181Rbb@';
+        loadedUsers[robsonIdx].role = 'SUPER_ADMIN';
+        loadedUsers[robsonIdx].permissions = {
+          manageUsers: true,
+          manageHosts: true,
+          manageLives: true,
+          manageCoins: true,
+          manageSettings: true,
+          manageAdmins: true,
+        };
+      }
+    }
+    return loadedUsers;
+  });
   const [photos, setPhotos] = useState<PrivatePhoto[]>(() => loadState('photos', INITIAL_PHOTOS));
   const [photoLocks, setPhotoLocks] = useState<PhotoUnlock[]>(() => loadState('photo_locks', []));
   const [lives, setLives] = useState<LiveStream[]>(() => loadState('lives', INITIAL_LIVES));

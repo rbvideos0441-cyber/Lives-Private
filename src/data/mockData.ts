@@ -39,6 +39,37 @@ export const INITIAL_COIN_PACKAGES: CoinPackage[] = [
 
 export const INITIAL_USERS: UserProfile[] = [
   {
+    id: 'user-robson',
+    username: 'robson',
+    email: 'robsonbatista3@gmail.com',
+    password: '25041981044181Rbb@',
+    role: 'SUPER_ADMIN',
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    bannerUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80',
+    bio: 'Administrador Geral da Plataforma StreamVip.',
+    coinsBalance: 99999,
+    followersCount: 0,
+    followingIds: [],
+    isBlocked: false,
+    isHostApproved: true,
+    isHostRequestPending: false,
+    livesCount: 0,
+    permissions: {
+      manageUsers: true,
+      manageHosts: true,
+      manageLives: true,
+      manageCoins: true,
+      manageSettings: true,
+      manageAdmins: true,
+    },
+    financialWallet: {
+      balanceAvailable: 0,
+      balancePending: 0,
+      totalReceived: 0,
+      totalWithdrawn: 0
+    }
+  },
+  {
     id: 'user-superadmin',
     username: 'superadmin_julio',
     email: 'julio@streamvip.com',

@@ -353,13 +353,19 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
           if (!peerConnectionsRef.current[viewerId] && docData.createdAt) {
             console.log(`Setting up host WebRTC peer connection for viewer: ${viewerId}`);
             
-            const pc = new RTCPeerConnection({
-              iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-              ]
-            });
-            peerConnectionsRef.current[viewerId] = pc;
+            let pc: RTCPeerConnection;
+            try {
+              pc = new RTCPeerConnection({
+                iceServers: [
+                  { urls: 'stun:stun.l.google.com:19302' },
+                  { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+              });
+              peerConnectionsRef.current[viewerId] = pc;
+            } catch (err) {
+              console.error('Failed to construct host RTCPeerConnection:', err);
+              return;
+            }
 
             // Bind tracks
             if (activeStreamRef.current) {
@@ -452,13 +458,20 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
 
     console.log(`Setting up viewer connection for live stream of host: ${live.hostId}`);
 
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'white:stun1.l.google.com:19302' }
-      ]
-    });
-    viewerConnectionRef.current = pc;
+    let pc: RTCPeerConnection;
+    try {
+      pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
+      viewerConnectionRef.current = pc;
+    } catch (err) {
+      console.error('Failed to construct RTCPeerConnection:', err);
+      setIsWebRTCStreamActive(false);
+      return;
+    }
 
     // Track stream additions
     pc.ontrack = (event) => {
@@ -466,6 +479,17 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
       if (viewerVideoRef.current && event.streams[0]) {
         viewerVideoRef.current.srcObject = event.streams[0];
         setIsWebRTCStreamActive(true);
+        
+        // Muted-agnostic autoplay handler
+        viewerVideoRef.current.play().catch(playErr => {
+          console.warn('Autoplay blocked. Muting stream to force play:', playErr);
+          setIsMuted(true);
+          // Retry playing once muted
+          if (viewerVideoRef.current) {
+            viewerVideoRef.current.muted = true;
+            viewerVideoRef.current.play().catch(e => console.error('Secondary play attempt failed:', e));
+          }
+        });
       }
     };
 
@@ -843,6 +867,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
                     ref={viewerVideoRef}
                     autoPlay
                     playsInline
+                    muted={isMuted}
                     className="w-full h-full object-cover transition-all duration-300"
                     style={{ filter: getFilterCSS(live.activeFilter || 'beauty') }}
                   />

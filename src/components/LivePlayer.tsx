@@ -207,6 +207,12 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   const [micLevel, setMicLevel] = useState<number>(0);
   const [showBroadcasterTip, setShowBroadcasterTip] = useState(true);
 
+  // New Client Spectator Reception & Diagnostics States
+  const [receptionMode, setReceptionMode] = useState<'AUTO' | 'WEBRTC' | 'SIMULATION'>('AUTO');
+  const [autoFallbackActive, setAutoFallbackActive] = useState(false);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const [isWebRTCStreamActive, setIsWebRTCStreamActive] = useState(false);
+
   // Web Audio Ambient Synthesizer Loop (plays soft, relaxing chords when they click "Unmute" inside simulation)
   const audioContextRef = useRef<AudioContext | null>(null);
   const synthIntervalRef = useRef<any>(null);
@@ -271,14 +277,46 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   };
 
   useEffect(() => {
-    // If not muted and viewing a simulated stream, play warm synth pads
-    if (!isMuted && !isHostCurrentUser && live.streamSource !== 'WEBCAM') {
+    const isSimulatedActive = live.streamSource !== 'WEBCAM' || autoFallbackActive;
+    if (!isMuted && !isHostCurrentUser && isSimulatedActive) {
       startSimulatedSynth();
     } else {
       stopSimulatedSynth();
     }
     return () => stopSimulatedSynth();
-  }, [isMuted, live.streamSource, isHostCurrentUser]);
+  }, [isMuted, live.streamSource, autoFallbackActive, isHostCurrentUser]);
+
+  // SPECTATOR AUTO FALLBACK DETECTION IN CASE WEBRTC FAILS TO RECEIVE MEDIA
+  useEffect(() => {
+    if (isHostCurrentUser || live.streamSource !== 'WEBCAM' || !hasPaid || !currentUser) {
+      setAutoFallbackActive(false);
+      setFallbackReason(null);
+      return;
+    }
+
+    if (receptionMode === 'WEBRTC') {
+      setAutoFallbackActive(false);
+      setFallbackReason(null);
+      return;
+    }
+
+    if (receptionMode === 'SIMULATION') {
+      setAutoFallbackActive(true);
+      setFallbackReason('Manual (Simulador de Transmissão)');
+      return;
+    }
+
+    // AUTO Mode: Wait 4 seconds for isWebRTCStreamActive to become true. If not, trigger autoFallback.
+    const timer = setTimeout(() => {
+      if (!isWebRTCStreamActive) {
+        console.warn('WebRTC peer connection timed out or is blocked by local residential firewall/NAT. Activating HD Simulation fallback.');
+        setAutoFallbackActive(true);
+        setFallbackReason('Conexão WebRTC limitada (Provedor de internet ou NAT bloqueou canal direto)');
+      }
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [isHostCurrentUser, live.streamSource, live.id, hasPaid, currentUser?.id, isWebRTCStreamActive, receptionMode]);
 
   // Bitrate fluctuation simulator
   useEffect(() => {
@@ -319,7 +357,6 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
   const viewerVideoRef = useRef<HTMLVideoElement>(null);
 
   // WebRTC & real-time message states
-  const [isWebRTCStreamActive, setIsWebRTCStreamActive] = useState(false);
   const [firestoreChats, setFirestoreChats] = useState<ChatMessage[]>([]);
 
   // Host WebRTC multi-peer trackers
@@ -958,7 +995,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
                     </div>
                   </div>
                 </div>
-              ) : isWebRTCStreamActive ? (
+              ) : (isWebRTCStreamActive && !autoFallbackActive) ? (
                 /* Real incoming WebRTC direct stream transmission with host matched beauty filters */
                 <div className="absolute inset-0 w-full h-full bg-black z-0">
                   <video
@@ -1046,6 +1083,39 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
                   <div className="absolute top-20 left-4 text-[8px] text-white/50 font-mono tracking-widest pointer-events-none select-none z-10">
                     1080p60 • H.264
                   </div>
+
+                  {/* Smart auto fallback spectator alert overlay banner */}
+                  {autoFallbackActive && !isHostCurrentUser && (
+                    <div className="absolute top-28 inset-x-4 bg-gradient-to-r from-gray-950/95 to-slate-950/95 backdrop-blur-lg border border-amber-500/20 p-2.5 rounded-xl z-20 text-[9px] leading-normal shadow-xl text-amber-200 animate-fade-in max-w-sm mx-auto">
+                      <div className="flex items-start gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0 animate-pulse" />
+                        <div>
+                          <p className="font-extrabold text-white text-[9.5px] tracking-tight mb-0.5 flex items-center gap-1">⚠️ Conexão Direta Limitada</p>
+                          <p className="text-gray-300">A rede/firewall do provedor impediu a conexão direta P2P com a webcam do Host. Ativamos o sinal espelhado de backup.</p>
+                          <div className="flex gap-4 mt-2 font-bold text-[8px]">
+                            <button
+                              onClick={() => {
+                                setReceptionMode('WEBRTC');
+                                setAutoFallbackActive(false);
+                              }}
+                              className="text-pink-400 hover:text-pink-300 underline cursor-pointer uppercase tracking-wider"
+                            >
+                              Tentar WebRTC Novamente
+                            </button>
+                            <button
+                              onClick={() => {
+                                setReceptionMode('SIMULATION');
+                                setAutoFallbackActive(true);
+                              }}
+                              className="text-gray-400 hover:text-gray-300 underline cursor-pointer uppercase tracking-wider"
+                            >
+                              Ficar na Simulação
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Realtime dynamic simulated audio bars */}
                   <div className="absolute bottom-24 right-4 flex items-end gap-[2px] h-[30px] z-10 pointer-events-none select-none">
@@ -1136,7 +1206,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
         )}
 
         {/* 5. SPECIFIC MODERATOR/HOST OPTIONS DOCK (Tucked Away Cog) */}
-        {hasPaid && (isHostCurrentUser || isAdminOrSuper) && (
+        {hasPaid && (
           <div className="absolute top-16 right-3 z-45">
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -1228,6 +1298,50 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({ live: initialLive, onClo
                       </button>
                     )}
                   </>
+                )}
+
+                {!isHostCurrentUser && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-gray-400 font-semibold mb-1">Qualidade/Sinal:</p>
+                    <button
+                      onClick={() => { 
+                        setReceptionMode('AUTO');
+                        setAutoFallbackActive(false);
+                      }}
+                      className={`w-full text-left p-1 rounded font-mono font-black cursor-pointer text-[7.5px] ${receptionMode === 'AUTO' ? 'bg-pink-600 text-white' : 'hover:bg-white/5 text-gray-400'}`}
+                      type="button"
+                    >
+                      🚀 Automático (Conexão Segura)
+                    </button>
+                    <button
+                      onClick={() => { 
+                        setReceptionMode('WEBRTC');
+                        setAutoFallbackActive(false);
+                      }}
+                      className={`w-full text-left p-1 rounded font-mono font-black cursor-pointer text-[7.5px] ${receptionMode === 'WEBRTC' ? 'bg-emerald-600 text-white' : 'hover:bg-white/5 text-gray-400'}`}
+                      type="button"
+                    >
+                      🎥 Webcam WebRTC Direta
+                    </button>
+                    <button
+                      onClick={() => { 
+                        setReceptionMode('SIMULATION'); 
+                        setAutoFallbackActive(true);
+                      }}
+                      className={`w-full text-left p-1 rounded font-mono font-black cursor-pointer text-[7.5px] ${receptionMode === 'SIMULATION' ? 'bg-orange-600 text-white' : 'hover:bg-white/5 text-gray-400'}`}
+                      type="button"
+                    >
+                      📺 Forçar Backup Simulador
+                    </button>
+                    
+                    <div className="pt-1.5 border-t border-white/10 mt-1 leading-normal text-gray-500 font-mono text-[7px]">
+                      {autoFallbackActive ? (
+                        <p className="text-amber-500 font-bold">⚠️ Backup ativo devido restrição WebRTC.</p>
+                      ) : (
+                        <p className="text-emerald-500">🟢 Canal WebRTC Direto ativo.</p>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {isAdminOrSuper && !isHostCurrentUser && (

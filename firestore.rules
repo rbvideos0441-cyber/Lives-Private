@@ -18,22 +18,11 @@ service cloud.firestore {
 
     // --- Active Live Streams ---
     match /lives/{liveId} {
-      allow read: if true;
-      allow create, update: if isValidId(liveId) &&
-        incomingData().id is string &&
-        incomingData().hostId is string &&
-        incomingData().hostName is string;
-      allow delete: if true;
+      allow read, write: if true;
 
       // --- Nested chat messages subcollection ---
       match /chats/{msgId} {
-        allow read: if true;
-        allow create, update: if isValidId(msgId) &&
-          incomingData().id is string &&
-          incomingData().liveId is string &&
-          incomingData().userId is string &&
-          incomingData().text is string;
-        allow delete: if true;
+        allow read, write: if true;
       }
 
       // --- WebRTC signaling subcollection for streaming ---

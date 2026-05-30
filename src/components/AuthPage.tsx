@@ -194,15 +194,7 @@ export const AuthPage: React.FC = () => {
               Acessar Conta VIP
             </button>
 
-            {/* Hint for easier initial login */}
-            <div className="pt-2 border-t border-gray-850 text-center">
-              <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
-                💡 Contas de demonstração para testes rápidos:<br/>
-                <span className="text-pink-400 font-semibold">@robson</span> ou <span className="text-pink-400 font-semibold">robsonbatista3@gmail.com</span> (Dono Geral 👑)<br/>
-                <span className="text-gray-400">Senha: </span><span className="text-pink-400/95 font-mono font-semibold">25041981044181Rbb@</span><br/>
-                <span className="text-pink-400/80 font-mono font-semibold">@juliana_bella</span> (Host Oficial)<br/>
-              </p>
-            </div>
+
           </form>
         ) : (
           <form onSubmit={handleSignup} className="space-y-4">
